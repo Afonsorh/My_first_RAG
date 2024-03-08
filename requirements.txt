@@ -1,1 +1,3 @@
 llama-index
+pandas
+flask
