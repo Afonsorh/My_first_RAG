@@ -13,7 +13,7 @@ from llama_index.core.llms import ChatMessage
 
 app = Flask(__name__)
 
-@app.route('/chat', methods=['POST'])
+@app.route('/', methods=['POST'])
 def process_messages():
     try:
         # Get JSON data from the request
@@ -69,6 +69,6 @@ def process_messages():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False)
 
 
