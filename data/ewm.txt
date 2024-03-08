@@ -1,0 +1,716 @@
+4.2 Basic Warehouse Inbound
+Processing from Supplier: 1FS
+In this section, we will first introduce the complex goods receipt
+process of the SAP Best Practices, in which the functions of the
+transport control and the RF-based processing of handling units in
+the processing of incoming goods are in the foreground. Second, we
+will explore the following variants through custom developments and
+enhancements:
+1FSa: Automatic handling unit creation without packaging
+specifications
+You will get familiar with the BAdI for automatic handling unit
+creation.
+1FSb: Simplify the screen flow for RF putaway
+We will adjust the RF framework Customizing to skip the entry
+screen of the RF putaway transaction.
+With most enhancements that we introduce in this section, you will
+find the BREAK-POINT ID ABAP statement in the coding. For each
+enhancement, we use a corresponding checkpoint group. You can
+create and activate the checkpoint groups using Transaction SAAB
+(Checkpoints that Can Be Activated).
+4.2.1 Process Description of Scope Item 1FS
+In Table 4.3, you will find in an overview of the steps for scope item
+1FS (Basic Warehouse Inbound Processing from Supplier). We list
+the physical activities and the system activities in separate columns.
+The process steps in SAP S/4HANA modules are skipped, and we
+start with the description of the EWM steps. A purchase order was
+created in materials management in SAP S/4HANA as preparation.
+Steps 3, 5, and 8 are completed by a goods receipt office clerk with
+system access via a desktop or a tablet PC using either SAP GUI or
+SAP Fiori–based apps. The warehouse operators who are physically
+moving the pallets from the truck (step 2), packing at the packing
+station (step 4) and moving to the final bin (step 7) work with mobile
+RF guns so that they post the movements in the system as they
+occur using RF based apps.
+During the putaway operation, there are a couple of variants to be
+found in the scope item. These variants are based on different
+products requiring different packaging, storage concepts, and final
+destination storage types. They include piece- or carton-based small
+part rack storage in a mezzanine, pallet-based narrow aisle high rack
+storage (including handover locations for the narrow aisle truck) for
+medium size parts, and ground floor–based bulk storage (mainly full
+pallets stacked in front and on top of each other) for large parts,
+allowing for either full pallet or partial pallet putaway. Another
+process variant includes clarification and repacking of small parts
+that arrived in the wrong packaging.
+Step Physical Activity System Activity
+Step Physical Activity System Activity
+1: A truck arrives
+at the checkpoint
+and drives to the
+door.
+A truck arrives.
+The warehouse
+clerk receives the
+delivery paper and
+communicates the
+door.
+The truck drives to
+the door.
+2: Unload the
+truck and check
+the goods.
+A warehouse
+worker unloads
+the truck.
+A warehouse clerk
+checks the goods
+against the
+delivery note.
+3: Create EWM
+inbound delivery
+via the Create
+Inbound Delivery
+app (SAP Fiori
+app F1705).
+The warehouse clerk
+creates the inbound
+delivery based on the
+delivery paperwork.
+4: Pack the
+goods, creating
+handling units
+and posting
+goods receipt
+(EWM).
+A warehouse worker
+creates and labels the
+handling units, posts the
+good receipt per handling
+unit.
+Step Physical Activity System Activity
+5: Create
+warehouse
+orders
+(EWM).
+The warehouse clerk
+creates putaway
+warehouse tasks and
+warehouse orders per the
+good receipts posted for
+the handling unit.
+6: The truck
+leaves.
+The truck leaves.
+7.1: Putaway the
+handling units to
+the mezzanine
+(EWM).
+A warehouse worker logs
+on as a resource.
+The warehouse worker
+scans the handling units.
+The system determines
+the open warehouse
+orders for the handling
+units.
+The warehouse
+worker moves the
+handling units to
+the final bin in the
+mezzanine.
+The warehouse worker
+confirms the warehouse
+orders.
+Step Physical Activity System Activity
+7.2: Putaway the
+handling units to
+narrow aisle high
+bay racks
+(EWM).
+A warehouse worker logs
+on as a resource.
+The warehouse worker
+scans the handling units.
+The system determines
+the open warehouse
+orders for the handling
+units.
+The warehouse
+worker moves the
+handling units to
+the handover zone
+for the narrow
+aisle high bay.
+The warehouse worker
+confirms the warehouse
+orders. The system
+activates the next
+warehouse task for final
+putaway in the
+background.
+A narrow aisle forklift
+driver scans the handling
+units.
+The system determines
+the open warehouse
+orders for the handling
+units.
+The forklift driver confirms
+the warehouse orders.
+Step Physical Activity System Activity
+7.3: Putaway the
+handling units to
+bulk ground floor
+area (EWM).
+7.4: Putaway the
+handling units to
+the clarification
+zone and
+repacking.
+The packer
+identifies the
+goods and creates
+putaway handling
+units.
+The packer closes the
+putaway handling units.
+The system prints
+handling unit labels and
+creates warehouse orders.
+The packer labels
+the putaway
+handling units.
+A warehouse worker logs
+on as a resource.
+The warehouse worker
+scans a putaway handling
+unit.
+The system determines
+the open warehouse order
+for the putaway handling
+unit.
+Step Physical Activity System Activity
+The warehouse
+worker moves
+the putaway
+handling unit to
+the final bin.
+The warehouse
+worker confirms
+the warehouse
+order.
+8: Check the
+inbound delivery
+(EWM).
+Table 4.3
+Steps in Inbound Scope Item 1FS
+The process description of scope item 1FS can also be found in the
+flow chart and test script of the scope item.
+4.2.2 Enhancement 1FSa: Automatic Handling
+Unit Creation without Packaging Specifications
+In custom development 1FSa, we will enhance the inbound steps
+with a function called Automatic Handling Unit Creation without
+Packaging Specifications. Step 3 of standard scope item 1FS will
+change with this custom development, making step 4 obsolete (see
+Table 4.4). All other process steps stay the same as described in
+Table 4.3.
+[»] Consider Unified Package Builder Functionality
+EWM offers a rather new feature that allows you to activate data
+sources other than the packaging specification for packaging
+requirements or proposals. These include SAP S/4HANA–based
+packing instructions and SAP Supply Chain Management–based
+package builder rules (e.g., alternative units of measure from the
+global material data).
+Step Physical
+Activity
+System Activity
+3: Create EWM inbound
+delivery (EWM) via GUI
+Transaction /SCWM/PRDI
+and create handling units.
+N/A The warehouse clerk
+checks the quantities,
+creates handling units in
+the system, and prints the
+new handling unit labels.
+She then posts the goods
+receipt.
+Table 4.4
+Process Steps with Deviation for Enhancement 1FSa
+The main difference between scope item 1FS and enhancement
+1FSa is that the pallets arriving from the office clerk create the
+handling unit labels instead of the warehouse operator, while the
+latter will apply them on the shop floor. The handling unit label will
+stay with the pallet as long as possible and can, for example, be
+used for an internal move, replenishment, or stock removal.
+In standard EWM, you could let the system automatically create
+handling units in the inbound process based on packaging
+specifications or unified package builder profiles. So for each product
+(or reference product), you have to maintain a packaging
+specification that defines the pallet quantity, the handling unit type,
+and the packaging material for the pallet. If you do not have
+packaging specifications for each product, and the unified package
+builder might not be an option, the solution shown in this chapter
+might be a suitable alternative in your project.
+To realize enhancement 1FSa, the following steps are necessary:
+1. Create a new master data table ZHU_PMAT to determine the
+packaging material for the handling units.
+2. Implement the HU_PROPOSAL method of BAdI
+/SCWM/EX_HU_BASICS_AUTOPACK.
+3. Switch on automatic packing for the inbound delivery.
+4. Create a condition record to print handling unit labels.
+Deactivate the printing for warehouse order labels.
+We describe the details for these four steps in the following sections.
+First, however, let’s look at the pallet building process in 1FS and
+discuss the prerequisites for this enhancement. We’ll also close the
+section by discussing how to test process 1FSa.
+Pallet Building in Process 1FS
+Process 1FS uses the quantity classification based on alternative
+UOM to determine the warehouse task quantity when putting away
+product from the clarification area. The alternative UOMs are defined
+in the product (see Figure 4.3), so, for example, 192 EA is one pallet,
+and 8 EA is one carton.
+Figure 4.3
+Material Master with UOM: Additional Data
+In the EWM · Master Data · Product · Define Unit of Measure
+Attributes IMG activity, the UOMs are assigned to quantity
+classifications (see Figure 4.4). So, for example, Quantity
+Classification P (Pallets) is assigned to Unit PAL. Based on this
+setting, the system will split the warehouse task quantities during
+warehouse task task creation in put-away and could also determine
+different storage types for putaway.
+Figure 4.4
+IMG Activity to Assign Quantity Classification to Units
+So if, for example, an inbound delivery with a quantity of 400 EA is
+received in the warehouse, the system would create four product
+warehouse tasks (see Figure 4.5, where we simulate inbound
+delivery packing in Transaction /SCWM/PRDI):
+Two warehouse tasks with 192 EA = 1 PAL
+Two warehouse tasks with 8 EA = 1 CAR
+Figure 4.5
+Automatic Handling Unit Creation in Inbound Delivery Packing
+Prerequisites for Enhancement 1FSa
+Enhancement 1FSa is useful in a warehouse if these prerequisites
+are met:
+No packaging specifications by product exist.
+The unified package builder is not a valid option.
+The pallet and/or carton quantity is available as an alternative
+UOM by product.
+Create New Master Data Table
+To create a handling unit in the system, a packaging material is
+mandatory. The system takes over the tare weight, volume, and
+handling unit type from the packing material master and also the kind
+of numbering (e.g., number range, Serial Shipping Container Code
+[SSCC]) specified via the packaging material. Hence, we will use a
+new, simple master data table to determine the packaging material
+based on the quantity classification. We will also determine a
+handling unit type that could be used to influence the putaway
+strategy and to find the optimal bin type.
+Create a new database in ABAP Dictionary (Transaction SE11).
+Enter the name, such as ZHU_PMAT, and a description. In Delivery
+Class, choose option A (master and transactional data), and in the
+Data Browser/Table View Maintenance field, make sure you
+choose option X—Display/Maintenance Allowed. On the Fields
+tab, maintain the fields as they are listed in Table 4.5.
+Field Data Element Key Check Table/Search Help
+CLIENT MANDT Yes
+LGNUM /SCWM/LGNUM Yes /SCWM/SH_LGNUM
+QUANCLA /SCWM/DE_QUANCLA Yes /SCWM/TQUANCLA
+HUTYP /SCWM/DE_HUTYP No /SCWM/THUTYP
+PACKMAT /SCWM/DE_PMAT No /SCWM/SH_PMAT_ONLY
+Table 4.5
+Fields of Custom Table ZHU_PMAT
+For the technical settings of the new table, choose “APPL0” for Data
+Class ,“0” for Size Category, and switch on the buffering (fully
+buffered).
+After you have saved and activated the table, navigate to the table
+maintenance generator (Transaction SE55) and generate a
+maintenance view (e.g., with authorization group SCEA and function
+group ZHU_PMAT).
+Last but not least, maintain a few entries in the new table using
+Transaction SM31 (Maintain Table Views; see Figure 4.6).
+Figure 4.6
+Maintain Packaging Material and Handling Unit Type in Table
+ZHU_PMAT
+Implement the HU_PROPOSAL Method
+To implement method HU_PROPOSAL, you have to start the BAdI
+Builder (Transaction SE19) and create an implementation for
+enhancement spot /SCWM/ES_HU_BASICS. First enter the name of the
+enhancement implementation (e.g., ZEI_HU_BASICS) and then choose
+BAdI definition /SCWM/EX_HU_BASICS_AUTOPACK. As a name for the
+BAdI implementation, you can enter, for example,
+ZEX_HU_BASICS_AUTOPACK, and as a class name, choose
+ZCL_IM_HU_BASICS_AUTOPACK. Navigate to the HU_PROPOSAL method and
+enter the coding as shown in Listing 4.1. Define one static, private
+attribute, ST_TUOM_QCLA, of type /SCWM/TT_UOM_QCLA for the class.
+Activate the coding and also the BAdI implementation:
+In coding paragraph “1, we first fetch the quantity classification
+table (/SCWM/TUOM_QCLA) from the IMG.
+We loop over all delivery items, and for each product we
+determine the list of alternative UOMs (see paragraph “2).
+By using standard function module /SCWM/QUANCLA_DET_UOM, we
+determine the quantity classification depending on the unpacked,
+open quantity (see “3).
+Based on the quantity classification, we determine in our new
+table ZHU_PMAT the packaging material and handling unit type (see
+“4).
+To determine the handling unit target quantity, we look up the first
+alternative unit that matches the required quantity classification.
+The numerator of this unit becomes the target quantity (see
+paragraph “5).
+In the last two paragraphs, “6 and “7, we finally create a handling
+unit and pack the delivery item into it.
+Note that we do not use the save method or the commit statement.
+As this is a BAdI implementation, we expect the calling
+environment to take care of saving and database commits.
+METHOD /scwm/if_ex_hu_basics_autopack~hu_proposal.
+DATA: lt_mat_uom TYPE /scwm/tt_material_uom,
+lv_quancla TYPE /scwm/de_quancla.
+BREAK-POINT ID zewmdevbook_1fsa.
+DATA(lo_pack) = CAST /scwm/cl_hu_packing( io_pack_ref ).
+DATA(lo_stock) = NEW /scwm/cl_ui_stock_fields( ).
+"1 Get quantity classification (prefetch)
+IF st_tuom_qcla IS INITIAL.
+SELECT * FROM /scwm/tuom_qcla
+INTO TABLE st_tuom_qcla
+WHERE lgnum = lo_pack->gv_lgnum.
+IF st_tuom_qcla IS INITIAL.
+RETURN.
+ENDIF.
+ENDIF.
+LOOP AT ct_pack ASSIGNING FIELD-SYMBOL(<pack>).
+CLEAR: lt_mat_uom.
+"2 Get product master for each delivery item
+TRY.
+CALL FUNCTION '/SCWM/MATERIAL_READ_SINGLE'
+EXPORTING
+iv_matid = <pack>-matid
+IMPORTING
+et_mat_uom = lt_mat_uom.
+CATCH /scwm/cx_md.
+io_pack_ref->go_log->add_message( ).
+cv_severity = sy-msgty.
+CONTINUE.
+ENDTRY.
+WHILE <pack>-quan > 0.
+"3 Get quantity classification based on open quantity
+TRY.
+CALL FUNCTION '/SCWM/QUANCLA_DET_UOM'
+EXPORTING
+iv_lgnum = lo_pack->gv_lgnum
+iv_matid = <pack>-matid
+iv_batchid = <pack>-batchid
+iv_quan = <pack>-quan
+iv_unit = <pack>-unit
+it_mat_uom = lt_mat_uom
+IMPORTING
+ev_quancla = lv_quancla.
+CATCH /scwm/cx_core.
+io_pack_ref->go_log->add_message( ).
+cv_severity = sy-msgty.
+CONTINUE.
+ENDTRY.
+"4 Determine packmat and hu_typ for the quantity classification
+SELECT SINGLE * FROM zhu_pmat
+INTO @DATA(ls_zhu_pmat)
+WHERE lgnum = @lo_pack->gv_lgnum
+AND quancla = @lv_quancla.
+IF ls_zhu_pmat-packmat IS INITIAL.
+"Error: No Packaging Material maintained for Quan.Class. &1.
+MESSAGE e001(zewmdevbook_1fsa) WITH lv_quancla.
+io_pack_ref->go_log->add_message( ).
+EXIT.
+ENDIF.
+DATA(lv_packmatid) = lo_stock->get_matid_by_no(
+iv_matnr = ls_zhu_pmat-packmat ).
+"5 Determine target quantity and UoM
+LOOP AT st_tuom_qcla INTO DATA(ls_quancla) WHERE quancla =
+lv_quancla.
+DATA(ls_mat_uom) = VALUE #( lt_mat_uom[ matid = <pack>-matid
+meinh = ls_quancla-unit ]
+).
+IF sy-subrc IS NOT INITIAL.
+EXIT.
+ENDIF.
+ENDLOOP.
+"6 Create new handling unit
+DATA(ls_hu_crea) = VALUE /scwm/s_huhdr_create_ext(
+hutyp = ls_zhu_pmat-hutyp ).
+DATA(ls_huhdr) = io_pack_ref->create_hu(
+EXPORTING
+iv_pmat = lv_packmatid
+is_hu_create = ls_hu_crea ).
+IF sy-subrc <> 0.
+io_pack_ref->go_log->add_message( ).
+EXIT.
+ENDIF.
+"7 Pack item
+DATA(ls_quan) = CORRESPONDING /scwm/s_quan( <pack> ).
+IF <pack>-quan >= ls_mat_uom-umrez.
+ls_quan-quan = 1.
+ls_quan-unit = ls_mat_uom-meinh.
+<pack>-quan = <pack>-quan - ls_mat_uom-umrez.
+ELSE.
+ls_quan-quan = <pack>-quan.
+<pack>-quan = 0.
+ENDIF.
+DATA(ls_mat) = CORRESPONDING /scwm/s_pack_stock( <pack> ).
+io_pack_ref->pack_stock(
+EXPORTING
+iv_dest_hu = ls_huhdr-guid_hu
+is_material = ls_mat
+is_quantity = ls_quan ).
+IF sy-subrc <> 0.
+io_pack_ref->go_log->add_message( ).
+EXIT.
+ENDIF.
+CLEAR: ls_mat, ls_quan, ls_hu_crea, lv_quancla,
+ls_huhdr, ls_quancla, ls_mat_uom, ls_zhu_pmat.
+ENDWHILE.
+ENDLOOP.
+ENDMETHOD.
+Listing 4.1
+Coding of HU_PROPOSAL Method
+
+
+
+Switch on Automatic Packing
+In IMG activity EWM · Goods Receipt Process · Inbound Delivery
+· Manual Settings · Define Document Types for Inbound Delivery
+Process, choose document type INB for document category PDI,
+change the following settings, and save:
+Packaging Material Proposal Procedure: 0IBD
+This packaging specification procedure entry is required to switch
+on the automatic packing in general. We enter a procedure,
+although we will not use packaging specifications. Make sure you
+enter a procedure for which you do not use packaging
+specifications in your project.
+No Automatic Packing: Yes
+With this setting, we switch off the automatic packing during
+inbound delivery creation. As in our process variant, we first want
+the user to verify the quantity and then create the handling unit
+labels in the office. We want the user to start the automatic
+packing manually when he is done with checking.
+Create a Condition Record
+As we want the system to print the labels automatically when the
+user creates the handling units, check and create new condition
+records in SAP menu EWM · Work Scheduling · Print · Settings ·
+Create Condition Records for Printing (HUs). Enter application
+and maintenance group PHU and select existing condition records
+for condition type 0HU1. Check the results list. If one does not exist
+yet, create one entry for each packaging material you use as in
+Figure 4.6 with the following values:
+Condition Type: 0HU1
+Warehouse: 1710
+HU Step: I—Create
+Packaging Material: for example, EWMS4-STOCON00 (EWM
+Default Storage Container/Box)
+HU Type: for example, YN02 (EWM Carton/Box)
+Form: /SCWM/HU_CONTENT
+Printer: for example, LP01
+Spool: 01
+Action: HU_LABEL_GENERAL_AND_RF
+Testing of Process 1FSa
+You can now test the handling unit creation and handling unit printing
+(see Table 4.6). In Figure 4.7, you can see the result of test step 4.1.
+For an inbound delivery quantity of 40 EA, the system created five
+handling units. All were created as boxes of 8 EA.
+Step Step
+Description
+Input Data and Expected Results
+Step Step
+Description
+Input Data and Expected Results
+4.2 Create
+EWM
+Inbound
+Delivery
+Use Transaction /SCWM/GR (Goods
+Receipt).
+Search for the inbound delivery using the PO
+number or using the ASN number.
+Check the delivery data against the revised
+delivery note and adapt the quantities if
+necessary.
+Use the Pack button to navigate to the Work
+Center Packing for Inbound Delivery
+screen for inbound deliveries, select the
+delivery items, and use the Pack
+Automatically button (see Figure 4.7).
+Navigate back and use the Post Goods
+Receipt button.
+Expected results:
+The system generates handling units.
+The system prints handling unit labels.
+Table 4.6
+Test Steps for Enhancement 1FSa
+Figure 4.7
+Automatic Packing in Inbound Deliveries
+After the user saves the results of automatic packing, the system will
+automatically print the handling unit labels, shown in Figure 4.8. The
+standard form shows a barcode, but it is very likely that you will have
+to adjust this form to your printer size and your barcode type.
+Figure 4.8
+Printout of Handling Unit Content Label
+For the putaway step 4 of the test case, you have now two options:
+either execute the step as described in the standard process, or
+continue with the information in the next section to use enhancement
+1FSb.
+
+4.2.3 Enhancement 1FSb: Simplify the Screen
+Flow for Radio Frequency Putaway
+In enhancement 1FSb, we will change step 7, Put Away the Goods,
+of process 1FS. The changes are described in Table 4.7. In the
+standard process, the putaway is paper-driven and without RF
+support. The warehouse operators move the pallets to the final bins
+and hand over the papers to the office clerk. Several times per day,
+the office clerk confirms the warehouse orders in the system based
+on the returned papers. This way, the stock increases and becomes
+available for sale. In process variant 1FSb, the warehouse operators
+will use RF devices and confirm each move of stock in the system
+immediately.
+In this section, we give an instruction on how to simplify the Putaway
+by Warehouse Order RF transaction (logical RF Transaction
+PTWOSI). With an adjustment in the RF framework, we reduce the
+number of UIs and eliminate one RF screen. So for each pallet the
+user scans, there is a warehouse order barcode from the paper and
+the destination bin barcode.
+Step Physical Activity System
+Activity
+4.6.5: Move
+Products from
+Clarification
+Zone to
+Mezzanine
+The warehouse worker takes
+the warehouse order printouts
+and sticks one printout on the
+goods.
+The warehouse worker moves
+the goods from the clarification
+zone to the final storage in the
+mezzanine.
+The warehouse
+operator
+confirms each
+putaway via RF.
+Table 4.7
+Process Steps with Deviation for Enhancement 1FSb
+To realize the variant 1FSb, Simplify the Screen Flow for RF
+Putaway, you have to do the following steps:
+1. Create RF presentation profile 1710 and copy the standard
+menu.
+2. Change the RF step flow for logical Transaction PTWOSI and
+presentation profile 1710 such that the first screen is skipped.
+The details for these two steps are described in the following
+sections. As usual, we will begin by discussing the prerequisites and
+end by discussing testing of this enhancement.
+Prerequisites for Enhancement 1FSb
+Enhancement 1FSb has the following prerequisites:
+Wi-Fi and mobile devices are supported in the warehouse
+Warehouse order barcode is on the printout of the warehouse
+order
+Create the Presentation Profile
+Now create a new presentation profile (see also Chapter 3,
+Section 3.3) to make warehouse-specific changes in the RF
+framework Customizing in the next step:
+Create a new presentation and personalization profile. This is
+done in the EWM · Mobile Data Entry · Define Steps in Logical
+Transactions IMG activity. In the Define Presentation Profiles
+folder, create a new entry, “1710”, by copying the existing ****
+entry.
+In the RF Menu Manager IMG activity, keep the default values on
+the entry screen and use the Copy Menu function. In the popup,
+enter presentation profile 1710, then continue and save.
+Assign the new presentation profile 1710 to warehouse number
+1710. This is done in IMG activity Assign Presentation Profile to
+Warehouse.
+Change the RF Step Flow
+We now change one entry in the RF framework Customizing so that
+the system will skip the putaway source screen.
+Go to IMG activity EWM · Mobile Data Entry · Define Steps in
+Logical Transactions. In the Define Logical Transactions folder,
+select logical Transaction PTWO** and navigate to subfolder Define
+Logical Transaction Step Flow. Select and copy the entry with the
+following keys:
+Presentation profile: ****
+Logical transaction: PTWO**
+Step: PTHUSC
+Function code: PBO1
+Before you save, change the following fields:
+Presentation profile: 1710
+Next step: PTHUDS
+Processing mode: 1—Background
+Function code background: PBO1
+With the changed settings, the system will skip the screen for step
+PTHUSC and immediately continue with step PTHUDS.
+[»] Copy Instead of Change
+We recommend not changing settings for presentation profile ****.
+For each project/template project, create a separate presentation
+profile as shown in step 3 and copy the standard settings from
+profile **** to your own profile before changing them. You can then
+use the unchanged settings for profile **** as reference. If there is
+a problem in RF, you can change back to **** before you ask SAP
+Support for help.
+Testing of Enhancement 1FSb
+Start your test with test steps 1 to 5 from process 1FS. Then replace
+step 6 with the test described in Table 4.8.
+Step Step Description Input Data and Expected Results
+4.6.5 Move Products
+from Clarification
+Zone to
+Mezzanine—
+Choose Menu
+Use Transaction /SCWM/RFUI (Log
+onto RF Environment) and log onto
+warehouse 1710 with resource
+YREC-1 and presentation device
+YE00.
+Navigate to menu item 03 Inbound
+Process · 03 Putaway · 03 Putaway
+by WO (fast access via 333).
+Scan the warehouse order barcode.
+Scan the destination bin.
+Expected result:
+The warehouse order is confirmed, and
+the stock is available for sale.
+Table 4.8
+Test Steps for Enhancement 1FSb
+In Figure 4.9, we want to show you how the RF transaction works for
+standard presentation profile ****, as follows:
+In the RF menu, the user chooses 03 Putaway by WO.
+Figure 4.9
+Putaway by Warehouse Order with Presentation Profile ****
+On the entry screen, the user scans the barcode for the warehouse
+order (RF step PTWOSL).
+On the source screen (RF step PTHUSC), the user confirms the
+pickup of the stock with several presses of (Enter).
+On the destination screen (RF step PTHUDS), the user scans the
+destination bin after he puts the stock there.
+When using the new presentation profile 1710, you’ll see that step
+PTHUSC is skipped by the system. The flow of screens is shown in
+Figure 4.10. So for each putaway transaction, the user will save one
+screen and one (Enter) press. There is also a difference in the
+number of warehouse tasks: the system will not use two tasks (one
+for posting stock from the source bin to the resource and another for
+posting stock from the resource to the destination bin). It will post
+only one task—that is, the moment the user confirms the destination
+bin.
+Figure 4.10
+Putaway by Warehouse Order with Presentation Profile 1710
+To have only one instead of two warehouse tasks at the end of the
+transaction is also a benefit in case the user changes his mind and
+steps back with (F7) on the destination screen (step PTHUDS). With
+the standard settings, the stock would stay on the resource and
+hence no other resource would be able to perform this warehouse
+order. If you work with high-level forklifts and low-level forklifts, it can
+happen quite often that only after seeing the destination screen can
+the operator decide if he is capable of doing the putaway at that
+destination bin.
+In this section, you learned how to skip screens in RF and how to
+process steps in background mode without coding adjustments.
+There are more RF transactions in the standard where you might
+have the need to skip a screen if the screen does not provide
+valuable information to your users.
+
