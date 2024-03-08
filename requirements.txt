@@ -2,3 +2,4 @@ llama-index
 pandas
 flask
 nltk
+requests

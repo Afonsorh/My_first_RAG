@@ -13,7 +13,7 @@ from llama_index.core.llms import ChatMessage
 
 app = Flask(__name__)
 
-@app.route('/', methods=['POST'])
+@app.route('/chat', methods=['POST'])
 def process_messages():
     try:
         # Get JSON data from the request
